@@ -10,7 +10,13 @@ spring:
   data:
     mongodb:
       uri: ${MONGODB_URI:mongodb://localhost:27017/gatepass_db}
+      database: ${MONGODB_DATABASE:gatepass_db}
       auto-index-creation: true
+
+# MongoDB Collection Names
+mongodb:
+  collection:
+    passes: ${MONGODB_COLLECTION_PASSES:passes}
 
   # Jackson Configuration
   jackson:
