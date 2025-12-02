@@ -37,7 +37,7 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/login", "/api/auth/logout", "/api/auth/me").permitAll()
-                        .requestMatchers(HttpMethod.POST, "/api/auth/signup").hasRole("ADMIN")
+//                        .requestMatchers(HttpMethod.POST, "/api/auth/signup").hasRole("ADMIN")
 //                        .requestMatchers("/api/passes/scan").hasAnyRole("ADMIN", "STAFF", "SCANNER")
 //                        .requestMatchers(HttpMethod.POST, "/api/passes").hasRole("ADMIN")
 //                        .requestMatchers(HttpMethod.DELETE, "/api/passes/**").hasRole("ADMIN")
