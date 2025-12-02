@@ -58,6 +58,18 @@ public class PassController {
         return ResponseEntity.ok(responses);
     }
 
+    @GetMapping("/filter")
+//    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<List<PassResponse>> getFilteredPasses(
+            @RequestParam(required = false) Boolean entryVerified,
+            @RequestParam(required = false) Boolean goodiesGiven,
+            @RequestParam(required = false) String verifiedBy,
+            @RequestParam(required = false) String goodiesGivenBy) {
+        List<PassResponse> responses = passService.getFilteredPasses(
+                entryVerified, goodiesGiven, verifiedBy, goodiesGivenBy);
+        return ResponseEntity.ok(responses);
+    }
+
     @DeleteMapping("/{id}")
 //    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deletePass(@PathVariable String id) {

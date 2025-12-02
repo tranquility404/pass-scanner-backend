@@ -9,6 +9,9 @@ import com.hackathon.gatepass.exception.PassNotFoundException;
 import com.hackathon.gatepass.model.Pass;
 import com.hackathon.gatepass.repository.PassRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.mongodb.core.MongoTemplate;
+import org.springframework.data.mongodb.core.query.Criteria;
+import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -20,6 +23,7 @@ import java.util.stream.Collectors;
 public class PassService {
 
     private final PassRepository passRepository;
+    private final MongoTemplate mongoTemplate;
 
     public PassResponse createPass(CreatePassRequest request) {
         if (passRepository.existsByPassCode(request.getPassCode())) {
@@ -79,6 +83,33 @@ public class PassService {
     public List<PassResponse> getAllPasses() {
         return passRepository.findAll()
                 .stream()
+                .map(this::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    public List<PassResponse> getFilteredPasses(Boolean entryVerified, Boolean goodiesGiven, 
+                                                  String verifiedBy, String goodiesGivenBy) {
+        Query query = new Query();
+        
+        if (entryVerified != null) {
+            query.addCriteria(Criteria.where("entry_verified").is(entryVerified));
+        }
+        
+        if (goodiesGiven != null) {
+            query.addCriteria(Criteria.where("goodies_given").is(goodiesGiven));
+        }
+        
+        if (verifiedBy != null && !verifiedBy.isEmpty()) {
+            query.addCriteria(Criteria.where("verified_by").is(verifiedBy));
+        }
+        
+        if (goodiesGivenBy != null && !goodiesGivenBy.isEmpty()) {
+            query.addCriteria(Criteria.where("goodies_given_by").is(goodiesGivenBy));
+        }
+        
+        List<Pass> passes = mongoTemplate.find(query, Pass.class);
+        
+        return passes.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }

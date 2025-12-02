@@ -3,17 +3,18 @@ package com.hackathon.gatepass.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
+import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.userdetails.User;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -35,6 +36,8 @@ public class SecurityConfig {
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .authorizeHttpRequests(auth -> auth
+                        .requestMatchers("/api/auth/login", "/api/auth/logout", "/api/auth/me").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/auth/signup").hasRole("ADMIN")
 //                        .requestMatchers("/api/passes/scan").hasAnyRole("ADMIN", "STAFF", "SCANNER")
 //                        .requestMatchers(HttpMethod.POST, "/api/passes").hasRole("ADMIN")
 //                        .requestMatchers(HttpMethod.DELETE, "/api/passes/**").hasRole("ADMIN")
@@ -43,7 +46,7 @@ public class SecurityConfig {
 //                        .hasAnyRole("ADMIN", "STAFF")
                         .anyRequest().permitAll()
                 )
-//                .httpBasic(basic -> {})
+                .httpBasic(basic -> {})
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
                 );
@@ -66,30 +69,18 @@ public class SecurityConfig {
     }
 
     @Bean
-    public UserDetailsService userDetailsService() {
-        UserDetails admin = User.builder()
-                .username("admin")
-                .password(passwordEncoder().encode("admin123"))
-                .roles("ADMIN")
-                .build();
-
-        UserDetails staff = User.builder()
-                .username("staff")
-                .password(passwordEncoder().encode("staff123"))
-                .roles("STAFF")
-                .build();
-
-        UserDetails scanner = User.builder()
-                .username("scanner")
-                .password(passwordEncoder().encode("scanner123"))
-                .roles("SCANNER")
-                .build();
-
-        return new InMemoryUserDetailsManager(admin, staff, scanner);
+    public PasswordEncoder passwordEncoder() {
+        return new BCryptPasswordEncoder();
     }
 
     @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+    public AuthenticationManager authenticationManager(
+            UserDetailsService userDetailsService,
+            PasswordEncoder passwordEncoder) {
+        DaoAuthenticationProvider authenticationProvider = new DaoAuthenticationProvider();
+        authenticationProvider.setUserDetailsService(userDetailsService);
+        authenticationProvider.setPasswordEncoder(passwordEncoder);
+
+        return new ProviderManager(authenticationProvider);
     }
 }
