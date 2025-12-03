@@ -2,6 +2,7 @@ package com.hackathon.gatepass.controller;
 
 import com.hackathon.gatepass.dto.CreatePassRequest;
 import com.hackathon.gatepass.dto.PassResponse;
+import com.hackathon.gatepass.dto.StatsResponse;
 import com.hackathon.gatepass.dto.VerifyRequest;
 import com.hackathon.gatepass.service.PassService;
 import jakarta.validation.Valid;
@@ -64,10 +65,18 @@ public class PassController {
             @RequestParam(required = false) Boolean entryVerified,
             @RequestParam(required = false) Boolean goodiesGiven,
             @RequestParam(required = false) String verifiedBy,
-            @RequestParam(required = false) String goodiesGivenBy) {
+            @RequestParam(required = false) String goodiesGivenBy,
+            @RequestParam(required = false) String college) {
         List<PassResponse> responses = passService.getFilteredPasses(
-                entryVerified, goodiesGiven, verifiedBy, goodiesGivenBy);
+                entryVerified, goodiesGiven, verifiedBy, goodiesGivenBy, college);
         return ResponseEntity.ok(responses);
+    }
+
+    @GetMapping("/stats")
+//    @PreAuthorize("hasAnyRole('ADMIN', 'STAFF')")
+    public ResponseEntity<StatsResponse> getStats() {
+        StatsResponse stats = passService.getStats();
+        return ResponseEntity.ok(stats);
     }
 
     @DeleteMapping("/{id}")

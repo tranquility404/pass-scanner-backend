@@ -2,6 +2,7 @@ package com.hackathon.gatepass.service;
 
 import com.hackathon.gatepass.dto.CreatePassRequest;
 import com.hackathon.gatepass.dto.PassResponse;
+import com.hackathon.gatepass.dto.StatsResponse;
 import com.hackathon.gatepass.dto.VerifyRequest;
 import com.hackathon.gatepass.exception.DuplicatePassCodeException;
 import com.hackathon.gatepass.exception.PassAlreadyVerifiedException;
@@ -15,7 +16,7 @@ import org.springframework.data.mongodb.core.query.Query;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.List;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -88,7 +89,7 @@ public class PassService {
     }
 
     public List<PassResponse> getFilteredPasses(Boolean entryVerified, Boolean goodiesGiven, 
-                                                  String verifiedBy, String goodiesGivenBy) {
+                                                  String verifiedBy, String goodiesGivenBy, String college) {
         Query query = new Query();
         
         if (entryVerified != null) {
@@ -107,11 +108,72 @@ public class PassService {
             query.addCriteria(Criteria.where("goodies_given_by").is(goodiesGivenBy));
         }
         
+        if (college != null && !college.isEmpty()) {
+            query.addCriteria(Criteria.where("college").regex(college, "i"));
+        }
+        
         List<Pass> passes = mongoTemplate.find(query, Pass.class);
         
         return passes.stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
+    }
+
+    public StatsResponse getStats() {
+        List<Pass> allPasses = passRepository.findAll();
+        
+        // Total counts
+        long totalPasses = allPasses.size();
+        long totalEntriesVerified = allPasses.stream()
+                .filter(p -> Boolean.TRUE.equals(p.getEntryVerified()))
+                .count();
+        long totalGoodiesGiven = allPasses.stream()
+                .filter(p -> Boolean.TRUE.equals(p.getGoodiesGiven()))
+                .count();
+        
+        // College statistics
+        Map<String, Long> collegeCountMap = allPasses.stream()
+                .filter(p -> p.getCollege() != null && !p.getCollege().isEmpty())
+                .collect(Collectors.groupingBy(Pass::getCollege, Collectors.counting()));
+        
+        List<StatsResponse.CollegeStats> colleges = collegeCountMap.entrySet().stream()
+                .map(entry -> StatsResponse.CollegeStats.builder()
+                        .collegeName(entry.getKey())
+                        .count(entry.getValue())
+                        .build())
+                .sorted(Comparator.comparing(StatsResponse.CollegeStats::getCount).reversed())
+                .collect(Collectors.toList());
+        
+        // Entries verified by
+        Map<String, Long> entriesVerifiedBy = allPasses.stream()
+                .filter(p -> p.getVerifiedBy() != null && !p.getVerifiedBy().isEmpty())
+                .collect(Collectors.groupingBy(Pass::getVerifiedBy, Collectors.counting()));
+        
+        String mostEntriesVerifiedBy = entriesVerifiedBy.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse(null);
+        
+        // Goodies given by
+        Map<String, Long> goodiesGivenBy = allPasses.stream()
+                .filter(p -> p.getGoodiesGivenBy() != null && !p.getGoodiesGivenBy().isEmpty())
+                .collect(Collectors.groupingBy(Pass::getGoodiesGivenBy, Collectors.counting()));
+        
+        String mostGoodiesGivenBy = goodiesGivenBy.entrySet().stream()
+                .max(Map.Entry.comparingByValue())
+                .map(Map.Entry::getKey)
+                .orElse(null);
+        
+        return StatsResponse.builder()
+                .totalPasses(totalPasses)
+                .totalEntriesVerified(totalEntriesVerified)
+                .totalGoodiesGiven(totalGoodiesGiven)
+                .colleges(colleges)
+                .entriesVerifiedBy(entriesVerifiedBy)
+                .goodiesGivenBy(goodiesGivenBy)
+                .mostEntriesVerifiedBy(mostEntriesVerifiedBy)
+                .mostGoodiesGivenBy(mostGoodiesGivenBy)
+                .build();
     }
 
     public void deletePass(String id) {
